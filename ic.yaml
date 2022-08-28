@@ -42,6 +42,16 @@ spec:
             local: # available : local/catalog
               name: echo-hello-world
               kind: Task    
+      
       - image: 'docker.io/alpine:3.13.6'
         name: git-checkout
         script: echo "HELLO"
+        notification:
+          onSuccess:
+            webhook:
+              url: http://cicd.hayeona92.link/webhook/github/public-git-config
+              body: Succes
+          onFailure:
+            webhook:
+              url: http://cicd.hayeona92.link/webhook/github/public-git-config
+              body: fail
