@@ -1,0 +1,65 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: echo-hello-world
+spec:
+  steps:
+    - name: echo
+      image: ubuntu
+      command:
+        - echo
+      args:
+        - "Hello World"
+---
+apiVersion: cicd.tmax.io/v1
+kind: IntegrationConfig
+metadata:
+  name: public-git-config
+spec:
+  git: # Configs for target repository
+    type: github # Available : github, gitlab
+    apiUrl: # url for self-served git servers (e.g. http://my.github). it is optional. 
+    repository: test-hayeon/cicd-operator-test
+    token:
+      valueFrom:
+        secretKeyRef:
+          name: github-token # FIY : 00-git-token.yaml 
+          key: token # FIY : 00-git-token.yaml
+
+  mergeConfig:
+    method: squash
+    query:
+      approveRequired: true
+      blockLabels:
+        - hold
+      checks:
+        - echo-using-tekton-task
+  jobs:
+    preSubmit:
+      - name: echo-using-tekton-task
+        tektonTask: # You can use tekton tasks, rather than writing scripts in IntefarangionConfig
+          taskRef:
+            local: # available : local/catalog
+              name: echo-hello-world
+              kind: Task    
+        notification:
+          onSuccess:
+            webhook:
+              url: http://cicd.hayeona92.link/webhook/github/public-git-config
+              body: Success
+          onFailure:
+            webhook:
+              url: http://cicd.hayeona92.link/webhook/github/public-git-config
+              body: fail
+      - image: 'docker.io/alpine:3.13.6'
+        name: git-checkout
+        script: echo "HELLO"
+        notification:
+          onSuccess:
+            webhook:
+              url: http://cicd.hayeona92.link/webhook/github/public-git-config
+              body: Succes
+          onFailure:
+            webhook:
+              url: http://cicd.hayeona92.link/webhook/github/public-git-config
+              body: fail
